@@ -1,57 +1,27 @@
 pipeline {
-    
-    // Define the agent where the pipeline will run
-    agent any 
-
-stages {
-        stage("Cloning the code from a Git repository") {
+    agent any
+    stages {
+        stage('Checkout') {
             steps {
-                // Clone the Git repository from the specified URL and branch
-                git url: "https://github.com/tmgravin/react-deployment.git", branch: "master"
-                
-                // Print a message in the console
-                echo "Successfully cloned the code"
+                git 'https://github.com/tmgravin/react-deployment.git'
             }
         }
-        stage("Building and testing the Docker image") {
+        stage('Build Docker Image') {
             steps {
-                // Build the Docker image 
-                sh "docker build -t tmgchyngba/react-app . "
-                // Print a message in the console
-                echo "Successfully build the image"
+                sh 'docker build -t tmgchyngba/react-app .'
             }
         }
-        
-        stage("Pushing to DockerHub") {
+        stage('Push Docker Image') {
             steps {
-                // Extract credentials for DockerHub stored in Jenkins
-                withCredentials(
-                    [usernamePassword(
-                        credentialsId: "docker_credentials", // Jenkins credentials ID
-                        usernameVariable: "docker_hub_username",
-                        passwordVariable: "docker_hub_passsword", 
-                    )]
-                )
-                
-                {
-                    // Log in to DockerHub using the credentials
-                    sh "docker login -u ${env.docker_hub_username} -p ${env.docker_hub_passsword}"
-                    
-                    // Print a message in the console
-                    echo "Login to dockerhub sucess"
-                    // Push the Docker image to DockerHub
-                    sh "docker push tmgchyngba/react-app"
-                    // Print a message in the console
-                    echo "Succesfully pushed the image"
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                    sh 'docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD'
+                    sh 'docker push tmgchyngba/react-app'
                 }
             }
         }
-        
-        
-        stage("Deploying the application using Docker Compose") {
+        stage('Deploy using Docker Compose') {
             steps {
-                // Bring up the Docker Compose services in detached mode
-                sh "docker compose up -d"
+                sh 'docker compose -f docker-compose.yml up -d'
             }
         }
     }
